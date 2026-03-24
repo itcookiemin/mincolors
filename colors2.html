@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Palette</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #12121f;
+            color: #dde1f0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+
+        .container {
+            background: #1c1c30;
+            border-radius: 18px;
+            padding: 26px 24px;
+            width: 580px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: #a0aacf;
+            margin-bottom: 22px;
+        }
+
+        .section-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #555a80;
+            margin-bottom: 10px;
+        }
+
+        /* ── 기본 24색 ── */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 6px;
+            margin-bottom: 22px;
+        }
+
+        .preset-swatch {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.12s, border-color 0.15s;
+        }
+
+        .preset-swatch:hover { transform: scale(1.18); border-color: rgba(255,255,255,0.7); }
+        .preset-swatch.active { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 8px rgba(255,255,255,0.4); }
+
+        /* ── 색상 피커 ── */
+        .picker-wrap {
+            display: flex;
+            gap: 10px;
+            height: 230px;
+            margin-bottom: 14px;
+        }
+
+        .sv-wrap {
+            flex: 1;
+            position: relative;
+            border-radius: 10px;
+            overflow: visible;
+        }
+
+        #sv-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .sv-thumb {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2.5px solid #fff;
+            box-shadow: 0 0 0 1.5px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.5);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            top: 0; left: 0;
+        }
+
+        .hue-wrap {
+            width: 22px;
+            position: relative;
+            border-radius: 10px;
+            overflow: visible;
+            flex-shrink: 0;
+        }
+
+        #hue-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            display: block;
+            cursor: pointer;
+        }
+
+        .hue-thumb {
+            position: absolute;
+            left: -4px;
+            right: -4px;
+            height: 6px;
+            border-radius: 3px;
+            background: #fff;
+            border: 1.5px solid rgba(0,0,0,0.35);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            pointer-events: none;
+            top: 0;
+        }
+
+        /* ── 채도 / 명도 슬라이더 ── */
+        .sliders {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            margin-bottom: 18px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-label {
+            font-size: 0.72rem;
+            color: #555a80;
+            width: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid rgba(0,0,0,0.25);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+
+        .slider-num {
+            font-size: 0.78rem;
+            font-family: monospace;
+            color: #a0aacf;
+            width: 32px;
+            text-align: right;
+        }
+
+        /* ── 선택된 색상 표시 ── */
+        .result-box {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            background: #14142a;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            border: 1px solid #2a2a45;
+        }
+
+        .big-preview {
+            width: 68px;
+            height: 68px;
+            border-radius: 10px;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.08);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+
+        .value-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .value-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .val-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #555a80;
+            width: 32px;
+        }
+
+        .val-input {
+            flex: 1;
+            background: #1c1c30;
+            border: 1px solid #2e2e50;
+            color: #dde1f0;
+            padding: 6px 10px;
+            border-radius: 7px;
+            font-size: 0.82rem;
+            font-family: 'Courier New', monospace;
+            cursor: default;
+        }
+
+        .copy-btn {
+            background: #3a3a65;
+            border: none;
+            color: #a0aacf;
+            padding: 6px 12px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover { background: #5050a0; color: #fff; }
+        .copy-btn.ok { background: #2d6a4f; color: #74c69d; }
+
+        /* ── 저장 버튼 ── */
+        .save-btn {
+            width: 100%;
+            padding: 11px;
+            background: linear-gradient(135deg, #4a4aaa, #7b2d8b);
+            border: none;
+            color: #fff;
+            border-radius: 9px;
+            font-size: 0.88rem;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            margin-bottom: 18px;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+
+        .save-btn:hover { opacity: 0.88; }
+        .save-btn:active { transform: scale(0.98); }
+
+        /* ── 저장된 색상 ── */
+        .saved-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 50px;
+        }
+
+        .saved-swatch {
+            width: 42px;
+            height: 42px;
+            border-radius: 9px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+            transition: transform 0.12s, border-color 0.15s;
+        }
+
+        .saved-swatch:hover { transform: scale(1.12); border-color: rgba(255,255,255,0.6); }
+
+        .del-btn {
+            display: none;
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            width: 18px;
+            height: 18px;
+            background: #c0392b;
+            border-radius: 50%;
+            font-size: 9px;
+            line-height: 18px;
+            text-align: center;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        .saved-swatch:hover .del-btn { display: block; }
+
+        .empty-msg {
+            color: #333558;
+            font-size: 0.82rem;
+            line-height: 50px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="title">COLOR PALETTE</div>
+
+    <div class="section-label">기본 24색</div>
+    <div class="preset-grid" id="preset-grid"></div>
+
+    <div class="section-label">색상 스펙트럼</div>
+    <div class="picker-wrap">
+        <div class="sv-wrap" id="sv-wrap">
+            <canvas id="sv-canvas"></canvas>
+            <div class="sv-thumb" id="sv-thumb"></div>
+        </div>
+        <div class="hue-wrap" id="hue-wrap">
+            <canvas id="hue-canvas"></canvas>
+            <div class="hue-thumb" id="hue-thumb"></div>
+        </div>
+    </div>
+
+    <div class="sliders">
+        <div class="slider-row">
+            <span class="slider-label">채도</span>
+            <input type="range" class="slider" id="sat-slider" min="0" max="100" value="100">
+            <span class="slider-num" id="sat-num">100</span>
+        </div>
+        <div class="slider-row">
+            <span class="slider-label">명도</span>
+            <input type="range" class="slider" id="val-slider" min="0" max="100" value="100">
+            <span class="slider-num" id="val-num">100</span>
+        </div>
+    </div>
+
+    <div class="section-label">선택된 색상</div>
+    <div class="result-box">
+        <div class="big-preview" id="big-preview"></div>
+        <div class="value-list">
+            <div class="value-row">
+                <span class="val-label">HEX</span>
+                <input class="val-input" id="hex-input" readonly>
+                <button class="copy-btn" id="copy-hex">복사</button>
+            </div>
+            <div class="value-row">
+                <span class="val-label">RGB</span>
+                <input class="val-input" id="rgb-input" readonly>
+                <button class="copy-btn" id="copy-rgb">복사</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="save-btn" id="save-btn">+ 현재 색상 저장</button>
+
+    <div class="section-label">저장된 색상</div>
+    <div class="saved-grid" id="saved-grid">
+        <span class="empty-msg">저장된 색상이 없습니다</span>
+    </div>
+</div>
+
+<script>
+    /* ── 상태 ── */
+    let hue = 210, sat = 70, val = 90;
+    let svDown = false, hueDown = false;
+    const saved = [];
+
+    /* ── 기본 24색 ── */
+    const PRESETS = [
+        '#FF0000','#FF4500','#FF7F00','#FFA500',
+        '#FFD700','#FFFF00','#7FBF00','#00CC44',
+        '#00CCAA','#00CCFF','#007FFF','#0033FF',
+        '#6600FF','#9900CC','#FF00FF','#FF1493',
+        '#FF85A1','#FFFFFF','#C8C8C8','#888888',
+        '#444444','#000000','#8B4513','#D2691E'
+    ];
+
+    const presetGrid = document.getElementById('preset-grid');
+    PRESETS.forEach(hex => {
+        const sw = document.createElement('div');
+        sw.className = 'preset-swatch';
+        sw.style.background = hex;
+        sw.title = hex;
+        sw.addEventListener('click', () => {
+            applyHex(hex);
+            document.querySelectorAll('.preset-swatch').forEach(s => s.classList.remove('active'));
+            sw.classList.add('active');
+        });
+        presetGrid.appendChild(sw);
+    });
+
+    /* ── 캔버스 참조 ── */
+    const svCanvas  = document.getElementById('sv-canvas');
+    const svCtx     = svCanvas.getContext('2d');
+    const hueCanvas = document.getElementById('hue-canvas');
+    const hueCtx    = hueCanvas.getContext('2d');
+    const svThumb   = document.getElementById('sv-thumb');
+    const hueThumb  = document.getElementById('hue-thumb');
+    const svWrap    = document.getElementById('sv-wrap');
+    const hueWrap   = document.getElementById('hue-wrap');
+
+    /* ── 캔버스 크기 초기화 ── */
+    function initCanvases() {
+        svCanvas.width  = svWrap.clientWidth;
+        svCanvas.height = svWrap.clientHeight;
+        hueCanvas.width  = hueWrap.clientWidth;
+        hueCanvas.height = hueWrap.clientHeight;
+        drawHue();
+        drawSV();
+        updateThumb();
+    }
+
+    /* ── 색상환 막대 그리기 ── */
+    function drawHue() {
+        const h = hueCanvas.height;
+        const grad = hueCtx.createLinearGradient(0, 0, 0, h);
+        for (let i = 0; i <= 360; i += 30) {
+            grad.addColorStop(i / 360, `hsl(${i},100%,50%)`);
+        }
+        hueCtx.fillStyle = grad;
+        hueCtx.fillRect(0, 0, hueCanvas.width, h);
+    }
+
+    /* ── SV 사각형 그리기 ── */
+    function drawSV() {
+        const w = svCanvas.width, h = svCanvas.height;
+        /* 가로: 흰색 → 순색 */
+        const gradH = svCtx.createLinearGradient(0, 0, w, 0);
+        gradH.addColorStop(0, 'rgba(255,255,255,1)');
+        gradH.addColorStop(1, `hsl(${hue},100%,50%)`);
+        svCtx.fillStyle = gradH;
+        svCtx.fillRect(0, 0, w, h);
+        /* 세로: 투명 → 검정 */
+        const gradV = svCtx.createLinearGradient(0, 0, 0, h);
+        gradV.addColorStop(0, 'rgba(0,0,0,0)');
+        gradV.addColorStop(1, 'rgba(0,0,0,1)');
+        svCtx.fillStyle = gradV;
+        svCtx.fillRect(0, 0, w, h);
+    }
+
+    /* ── 썸 커서 위치 업데이트 ── */
+    function updateThumb() {
+        const sw = svCanvas.width, sh = svCanvas.height;
+        const x = (sat / 100) * sw;
+        const y = (1 - val / 100) * sh;
+        svThumb.style.left = x + 'px';
+        svThumb.style.top  = y + 'px';
+
+        const hy = (hue / 360) * hueCanvas.height;
+        hueThumb.style.top = Math.max(0, hy - 3) + 'px';
+    }
+
+    /* ── 슬라이더 배경 업데이트 ── */
+    function updateSliders() {
+        const pure = `hsl(${hue},100%,50%)`;
+        document.getElementById('sat-slider').style.background =
+            `linear-gradient(to right,#fff,${pure})`;
+        document.getElementById('val-slider').style.background =
+            `linear-gradient(to right,#000,${pure})`;
+        document.getElementById('sat-slider').value = sat;
+        document.getElementById('val-slider').value = val;
+        document.getElementById('sat-num').textContent = sat;
+        document.getElementById('val-num').textContent = val;
+    }
+
+    /* ── 색상 표시 업데이트 ── */
+    function updateDisplay() {
+        const rgb = hsvToRgb(hue, sat / 100, val / 100);
+        const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+        document.getElementById('big-preview').style.background = hex;
+        document.getElementById('hex-input').value = hex.toUpperCase();
+        document.getElementById('rgb-input').value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    }
+
+    /* ── 전체 갱신 ── */
+    function refresh() {
+        drawSV();
+        updateThumb();
+        updateSliders();
+        updateDisplay();
+    }
+
+    /* ── HSV 이벤트 처리 ── */
+    function handleSV(e) {
+        const rect = svCanvas.getBoundingClientRect();
+        const cx = e.clientX ?? e.touches[0].clientX;
+        const cy = e.clientY ?? e.touches[0].clientY;
+        sat = Math.round(Math.max(0, Math.min(1, (cx - rect.left) / rect.width))  * 100);
+        val = Math.round(Math.max(0, Math.min(1, 1 - (cy - rect.top) / rect.height)) * 100);
+        clearPreset();
+        refresh();
+    }
+
+    function handleHue(e) {
+        const rect = hueCanvas.getBoundingClientRect();
+        const cy = e.clientY ?? e.touches[0].clientY;
+        hue = Math.round(Math.max(0, Math.min(1, (cy - rect.top) / rect.height)) * 360);
+        clearPreset();
+        refresh();
+    }
+
+    svCanvas.addEventListener('mousedown',  e => { svDown = true;  handleSV(e); });
+    hueCanvas.addEventListener('mousedown', e => { hueDown = true; handleHue(e); });
+    document.addEventListener('mousemove',  e => { if (svDown)  handleSV(e);  if (hueDown) handleHue(e); });
+    document.addEventListener('mouseup',    ()  => { svDown = false; hueDown = false; });
+
+    svCanvas.addEventListener('touchstart',  e => { e.preventDefault(); handleSV(e); },  { passive: false });
+    svCanvas.addEventListener('touchmove',   e => { e.preventDefault(); handleSV(e); },  { passive: false });
+    hueCanvas.addEventListener('touchstart', e => { e.preventDefault(); handleHue(e); }, { passive: false });
+    hueCanvas.addEventListener('touchmove',  e => { e.preventDefault(); handleHue(e); }, { passive: false });
+
+    /* ── 슬라이더 이벤트 ── */
+    document.getElementById('sat-slider').addEventListener('input', e => {
+        sat = +e.target.value; clearPreset(); refresh();
+    });
+    document.getElementById('val-slider').addEventListener('input', e => {
+        val = +e.target.value; clearPreset(); refresh();
+    });
+
+    /* ── 복사 ── */
+    function setupCopy(btnId, inputId) {
+        document.getElementById(btnId).addEventListener('click', () => {
+            const txt = document.getElementById(inputId).value;
+            navigator.clipboard.writeText(txt).then(() => {
+                const btn = document.getElementById(btnId);
+                const orig = btn.textContent;
+                btn.textContent = '✓ 복사됨';
+                btn.classList.add('ok');
+                setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1500);
+            });
+        });
+    }
+    setupCopy('copy-hex', 'hex-input');
+    setupCopy('copy-rgb', 'rgb-input');
+
+    /* ── 색상 저장 ── */
+    document.getElementById('save-btn').addEventListener('click', () => {
+        const hex = document.getElementById('hex-input').value.toLowerCase();
+        if (saved.includes(hex)) return;
+        saved.push(hex);
+        renderSaved();
+    });
+
+    function renderSaved() {
+        const grid = document.getElementById('saved-grid');
+        if (saved.length === 0) {
+            grid.innerHTML = '<span class="empty-msg">저장된 색상이 없습니다</span>';
+            return;
+        }
+        grid.innerHTML = '';
+        saved.forEach((hex, i) => {
+            const sw = document.createElement('div');
+            sw.className = 'saved-swatch';
+            sw.style.background = hex;
+            sw.title = hex;
+            sw.innerHTML = '<div class="del-btn">✕</div>';
+            sw.addEventListener('click', e => {
+                if (e.target.classList.contains('del-btn')) {
+                    saved.splice(i, 1);
+                    renderSaved();
+                } else {
+                    applyHex(hex);
+                    clearPreset();
+                }
+            });
+            grid.appendChild(sw);
+        });
+    }
+
+    /* ── HEX 로 HSV 설정 ── */
+    function applyHex(hex) {
+        const rgb = hexToRgb(hex);
+        if (!rgb) return;
+        const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+        hue = hsv.h; sat = hsv.s; val = hsv.v;
+        refresh();
+    }
+
+    function clearPreset() {
+        document.querySelectorAll('.preset-swatch').forEach(s => s.classList.remove('active'));
+    }
+
+    /* ── 색상 변환 유틸 ── */
+    function hsvToRgb(h, s, v) {
+        const i = Math.floor(h / 60) % 6;
+        const f = h / 60 - Math.floor(h / 60);
+        const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+        const map = [[v,t,p],[q,v,p],[p,v,t],[p,q,v],[t,p,v],[v,p,q]][i];
+        return { r: Math.round(map[0]*255), g: Math.round(map[1]*255), b: Math.round(map[2]*255) };
+    }
+
+    function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
+    function hexToRgb(hex) {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return m ? { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) } : null;
+    }
+
+    function rgbToHsv(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+        let h = 0;
+        if (d) {
+            if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+            else if (max === g) h = ((b - r) / d + 2) / 6;
+            else h = ((r - g) / d + 4) / 6;
+        }
+        return { h: Math.round(h * 360), s: Math.round(max ? (d / max) * 100 : 0), v: Math.round(max * 100) };
+    }
+
+    /* ── 초기화 ── */
+    window.addEventListener('load', () => {
+        initCanvases();
+        refresh();
+    });
+</script>
+</body>
+</html>
